@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Vault | Advanced Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        /* --- CSS Variables for Theming --- */
+        :root {
+            /* Dark Mode (Default) */
+            --bg-color: #050509;
+            --panel-bg: rgba(22, 22, 30, 0.85);
+            --accent: #00ffcc;
+            --accent-hover: #00cca3;
+            --accent-warn: #ff9e64;
+            --accent-danger: #f7768e;
+            --text-main: #a9b1d6;
+            --text-dim: #565f89;
+            --border-color: #292e42;
+            --bg-grad-1: #0a0a1a;
+            --bg-grad-2: #162032;
+            --bg-grad-3: #0d1b2a;
+        }
+
+        [data-theme="light"] {
+            /* Light Mode */
+            --bg-color: #e2e8f0;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --accent: #0ea5e9;
+            --accent-hover: #0284c7;
+            --accent-warn: #f59e0b;
+            --accent-danger: #e11d48;
+            --text-main: #334155;
+            --text-dim: #64748b;
+            --border-color: #cbd5e1;
+            --bg-grad-1: #f1f5f9;
+            --bg-grad-2: #e2e8f0;
+            --bg-grad-3: #cbd5e1;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* --- Animated Graphical Background --- */
+        .animated-bg {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, var(--bg-grad-1), var(--bg-grad-2), var(--bg-grad-3));
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -1;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- UI Container --- */
+        .dashboard {
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px 40px;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-height: 95vh;
+            overflow-y: auto;
+            opacity: 0;
+        }
+
+        .dashboard::-webkit-scrollbar { width: 8px; }
+        .dashboard::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
+
+        /* --- Header: Clock & Theme Toggle --- */
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        #clockDisplay { font-weight: bold; letter-spacing: 1px; }
+
+        .theme-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        h2 {
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        /* --- Inputs & Controls --- */
+        .input-group { margin-bottom: 20px; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+            color: var(--accent);
+            padding: 12px;
+            font-size: 1.1em;
+            font-family: inherit;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
+        }
+
+        /* Entropy Meter */
+        .meter-container { margin-top: 8px; height: 4px; background: rgba(0, 0, 0, 0.2); border-radius: 2px; overflow: hidden; }
+        .meter-bar { height: 100%; width: 0%; background: var(--accent-danger); transition: width 0.3s ease, background-color 0.3s ease; }
+        .base-stats { font-size: 0.8em; color: var(--text-dim); margin-top: 5px; text-align: right; }
+
+        /* Sliders */
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; margin-top: 5px; margin-bottom: 5px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; margin-top: -7px; }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: var(--border-color); border-radius: 2px; }
+
+        /* Buttons */
+        .button-group { display: flex; gap: 10px; margin-top: 10px; }
+        
+        button.action-btn {
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            padding: 15px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        #generateBtn { flex: 2; }
+        #generateBtn:hover { background: var(--accent); color: var(--panel-bg); }
+        
+        #resetBtn { flex: 1; border-color: var(--accent-danger); color: var(--accent-danger); }
+        #resetBtn:hover { background: var(--accent-danger); color: white; }
+
+        /* --- Output Area --- */
+        .output-container {
+            margin-top: 30px;
+            padding: 20px 20px 40px 20px;
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            text-align: center;
+            position: relative;
+        }
+
+        .output-text {
+            color: var(--text-dim);
+            font-size: 1.2em;
+            letter-spacing: 2px;
+            word-break: break-all;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 120px;
+            overflow-y: auto;
+            transition: background-color 0.2s ease;
+        }
+        .output-text::-webkit-scrollbar { width: 4px; }
+        .output-text::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 2px; }
+        .output-text.ready:hover { background: rgba(0, 0, 0, 0.05); }
+
+        .visibility-toggle {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 0.8em;
+            cursor: pointer;
+            text-transform: uppercase;
+            padding: 5px;
+        }
+        .visibility-toggle:hover { color: var(--text-main); }
+        .visibility-toggle.hidden { display: none; }
+
+        .output-metrics {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        .metrics-row-top { display: flex; justify-content: space-around; }
+        .metrics-row-bottom { margin-top: 5px; }
+        .metric span { color: var(--text-main); font-weight: bold; }
+        
+        .copy-notification {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: var(--panel-bg);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: bold;
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="animated-bg"></div>
+
+    <div class="dashboard">
+        <div class="header-controls">
+            <div id="clockDisplay">00:00:00</div>
+            <button class="theme-btn" id="themeToggle">☀️ Light Mode</button>
+        </div>
+
+        <h2>System Vault Admin</h2>
+        
+        <div class="input-group">
+            <label><span>Base Password</span> <span id="baseQuality">Quality: LOW</span></label>
+            <input type="password" id="basePassword" placeholder="Enter base string..." autocomplete="off">
+            <div class="meter-container">
+                <div class="meter-bar" id="meterBar"></div>
+            </div>
+            <div class="base-stats" id="baseStats">Entropy: 0 bits | Chars: 0</div>
+        </div>
+
+        <div class="input-group">
+            <label><span>Generated Length</span> <span id="lengthValDisplay" style="color: var(--accent); font-weight: bold;">44</span></label>
+            <input type="range" id="lengthSlider" min="0" max="500" value="44">
+        </div>
+
+        <div class="input-group">
+            <label>Combination Mode</label>
+            <select id="combineMode">
+                <option value="keyOnly">Generated Key Only</option>
+                <option value="append" selected>Base + Generated Key</option>
+                <option value="prepend">Generated Key + Base</option>
+                <option value="shuffle">Random Mix (Shuffle Both)</option>
+            </select>
+        </div>
+
+        <div class="button-group">
+            <button class="action-btn" id="generateBtn">Generate Secure Key</button>
+            <button class="action-btn" id="resetBtn">Reset Vault</button>
+        </div>
+
+        <div class="output-container">
+            <div class="copy-notification" id="copyNotification">COPIED TO CLIPBOARD</div>
+            <div class="output-text" id="output" title="Click to copy">WAITING FOR INPUT...</div>
+            <button id="toggleVisibilityBtn" class="visibility-toggle hidden">👁️ Reveal</button>
+            <div class="output-metrics" id="outputMetrics">
+                <div class="metrics-row-top">
+                    <div class="metric">Final Entropy: <span id="outEntropy">0-bit</span></div>
+                    <div class="metric">Total Length: <span id="outLength">0</span></div>
+                </div>
+                <div class="metrics-row-bottom">
+                    <div class="metric">Brute Force (RTX 6000 Ada, bcrypt 10): <span id="outTime" style="color: var(--accent)">INFINITY</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Advanced Object-Oriented System Vault Controller
+         */
+        class SystemVault {
+            constructor() {
+                this.state = {
+                    currentBaseEntropy: 0,
+                    finalGeneratedKey: "",
+                    isKeyHidden: true,
+                    isDarkMode: true
+                };
+
+                this.cacheDOM();
+                this.bindEvents();
+                this.initClock();
+                this.entranceAnimation();
+            }
+
+            cacheDOM() {
+                this.dom = {
+                    clock: document.getElementById('clockDisplay'),
+                    themeToggle: document.getElementById('themeToggle'),
+                    baseInput: document.getElementById('basePassword'),
+                    meterBar: document.getElementById('meterBar'),
+                    baseStats: document.getElementById('baseStats'),
+                    baseQuality: document.getElementById('baseQuality'),
+                    lengthSlider: document.getElementById('lengthSlider'),
+                    lengthValDisplay: document.getElementById('lengthValDisplay'),
+                    combineMode: document.getElementById('combineMode'),
+                    generateBtn: document.getElementById('generateBtn'),
+                    resetBtn: document.getElementById('resetBtn'),
+                    outputEl: document.getElementById('output'),
+                    outputMetrics: document.getElementById('outputMetrics'),
+                    toggleVisBtn: document.getElementById('toggleVisibilityBtn'),
+                    copyNotif: document.getElementById('copyNotification'),
+                    outLength: document.getElementById('outLength'),
+                    outEntropy: document.getElementById('outEntropy'),
+                    outTime: document.getElementById('outTime')
+                };
+            }
+
+            bindEvents() {
+                this.dom.themeToggle.addEventListener('click', () => this.toggleTheme());
+                this.dom.lengthSlider.addEventListener('input', (e) => this.dom.lengthValDisplay.textContent = e.target.value);
+                this.dom.baseInput.addEventListener('input', (e) => this.updateEntropyUI(e.target.value));
+                this.dom.toggleVisBtn.addEventListener('click', () => this.toggleVisibility());
+                this.dom.outputEl.addEventListener('click', () => this.copyToClipboard());
+                this.dom.resetBtn.addEventListener('click', () => this.resetVault());
+                this.dom.generateBtn.addEventListener('click', () => this.generateKey());
+            }
+
+            // --- Features & UI ---
+
+            initClock() {
+                const tick = () => {
+                    const now = new Date();
+                    this.dom.clock.textContent = now.toLocaleString();
+                };
+                tick();
+                setInterval(tick, 1000);
+            }
+
+            toggleTheme() {
+                this.state.isDarkMode = !this.state.isDarkMode;
+                if (this.state.isDarkMode) {
+                    document.documentElement.removeAttribute('data-theme');
+                    this.dom.themeToggle.textContent = "☀️ Light Mode";
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    this.dom.themeToggle.textContent = "🌙 Dark Mode";
+                }
+            }
+
+            updateEntropyUI(pwd) {
+                let poolSize = 0;
+                if (/[a-z]/.test(pwd)) poolSize += 26;
+                if (/[A-Z]/.test(pwd)) poolSize += 26;
+                if (/[0-9]/.test(pwd)) poolSize += 10;
+                if (/[^a-zA-Z0-9]/.test(pwd)) poolSize += 32;
+
+                this.state.currentBaseEntropy = pwd.length > 0 ? Math.round(pwd.length * Math.log2(poolSize)) : 0;
+                this.dom.baseStats.textContent = `Entropy: ${this.state.currentBaseEntropy} bits | Chars: ${pwd.length}`;
+
+                let width = Math.min((this.state.currentBaseEntropy / 128) * 100, 100);
+                this.dom.meterBar.style.width = `${width}%`;
+
+                if (this.state.currentBaseEntropy === 0) {
+                    this.dom.baseQuality.textContent = 'Quality: LOW';
+                    this.dom.meterBar.style.backgroundColor = 'var(--accent-danger)';
+                    this.dom.baseQuality.style.color = 'var(--accent-danger)';
+                } else if (this.state.currentBaseEntropy < 40) {
+                    this.dom.baseQuality.textContent = 'Quality: LOW';
+                    this.dom.meterBar.style.backgroundColor = 'var(--accent-danger)';
+                    this.dom.baseQuality.style.color = 'var(--accent-danger)';
+                } else if (this.state.currentBaseEntropy < 80) {
+                    this.dom.baseQuality.textContent = 'Quality: MODERATE';
+                    this.dom.meterBar.style.backgroundColor = 'var(--accent-warn)';
+                    this.dom.baseQuality.style.color = 'var(--accent-warn)';
+                } else {
+                    this.dom.baseQuality.textContent = 'Quality: STRONG';
+                    this.dom.meterBar.style.backgroundColor = 'var(--accent)';
+                    this.dom.baseQuality.style.color = 'var(--accent)';
+                }
+            }
+
+            toggleVisibility() {
+                this.state.isKeyHidden = !this.state.isKeyHidden;
+                if (this.state.isKeyHidden) {
+                    this.dom.outputEl.textContent = '•'.repeat(Math.min(this.state.finalGeneratedKey.length, 64)) + (this.state.finalGeneratedKey.length > 64 ? '...' : '');
+                    this.dom.toggleVisBtn.textContent = "👁️ Reveal";
+                } else {
+                    this.dom.outputEl.textContent = this.state.finalGeneratedKey;
+                    this.dom.toggleVisBtn.textContent = "🙈 Hide";
+                }
+            }
+
+            copyToClipboard() {
+                if (this.state.finalGeneratedKey) {
+                    navigator.clipboard.writeText(this.state.finalGeneratedKey).then(() => {
+                        anime({ targets: this.dom.copyNotif, opacity: [0, 1, 1, 0], translateY: [10, -10, -10, -20], duration: 1500, easing: 'easeOutExpo' });
+                    }).catch(err => console.error("Failed to copy: ", err));
+                }
+            }
+
+            resetVault() {
+                anime({ targets: this.dom.resetBtn, scale: [0.95, 1], duration: 300, easing: 'easeOutQuad' });
+
+                this.dom.baseInput.value = "";
+                this.dom.lengthSlider.value = 44;
+                this.dom.lengthValDisplay.textContent = "44";
+                this.dom.combineMode.value = "append";
+                
+                this.state.finalGeneratedKey = "";
+                this.state.isKeyHidden = true;
+                
+                this.updateEntropyUI("");
+                
+                this.dom.outputEl.classList.remove('ready');
+                this.dom.toggleVisBtn.classList.add('hidden');
+                
+                this.dom.outputEl.style.color = 'var(--text-dim)';
+                this.dom.outputEl.textContent = "WAITING FOR INPUT...";
+                this.dom.outEntropy.textContent = "0-bit";
+                this.dom.outLength.textContent = "0";
+                this.dom.outTime.textContent = "INFINITY";
+                this.dom.outTime.style.color = "var(--accent)";
+            }
+
+            // --- Cryptography & Math ---
+
+            calculateBruteForceTime(totalEntropyBits) {
+                if (totalEntropyBits > 80) return { text: "INFINITY", color: "var(--accent)" };
+                if (totalEntropyBits === 0) return { text: "INSTANT", color: "var(--accent-danger)" };
+                
+                // RTX 6000 Ada Generation estimates ~150,000 hashes/sec for bcrypt cost 10
+                const hashesPerSecond = 150000; 
+                const seconds = Math.pow(2, totalEntropyBits) / hashesPerSecond;
+                
+                if (seconds < 1) return { text: "< 1 SECOND", color: "var(--accent-danger)" };
+                if (seconds < 60) return { text: `${Math.round(seconds)} SECONDS`, color: "var(--accent-danger)" };
+                if (seconds < 3600) return { text: `${Math.round(seconds/60)} MINUTES`, color: "var(--accent-warn)" };
+                if (seconds < 86400) return { text: `${Math.round(seconds/3600)} HOURS`, color: "var(--accent-warn)" };
+                if (seconds < 31536000) return { text: `${Math.round(seconds/86400)} DAYS`, color: "var(--accent)" };
+                return { text: `${Math.round(seconds/31536000).toLocaleString()} YEARS`, color: "var(--accent)" };
+            }
+
+            async deriveHighEntropyPassword(basePassword, desiredLength) {
+                if (desiredLength === 0) return "";
+                const bitsRequired = Math.ceil((desiredLength * 6) / 8) * 8;
+                const encoder = new TextEncoder();
+                const keyMaterial = await window.crypto.subtle.importKey("raw", encoder.encode(basePassword), { name: "PBKDF2" }, false, ["deriveBits"]);
+                const salt = window.crypto.getRandomValues(new Uint8Array(32));
+                const derivedBits = await window.crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, bitsRequired);
+                return btoa(String.fromCharCode(...new Uint8Array(derivedBits))).slice(0, desiredLength);
+            }
+
+            shuffleString(str) {
+                let arr = str.split('');
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr.join('');
+            }
+
+            async generateKey() {
+                const baseStr = this.dom.baseInput.value;
+                const requestedLen = parseInt(this.dom.lengthSlider.value, 10);
+                const mode = this.dom.combineMode.value;
+
+                anime({ targets: this.dom.generateBtn, scale: [0.95, 1], duration: 300, easing: 'easeOutQuad' });
+                this.dom.toggleVisBtn.classList.add('hidden');
+
+                if (!baseStr && mode !== 'keyOnly') {
+                    this.dom.outputEl.classList.remove('ready');
+                    this.state.finalGeneratedKey = "";
+                    this.dom.outputEl.style.color = 'var(--accent-danger)';
+                    this.dom.outputEl.textContent = "ERR: BASE STRING REQUIRED FOR MIXING";
+                    return;
+                }
+
+                this.dom.outputEl.classList.remove('ready');
+                this.state.finalGeneratedKey = "";
+                this.state.isKeyHidden = true; 
+                this.dom.toggleVisBtn.textContent = "👁️ Reveal";
+                this.dom.outputEl.style.color = 'var(--text-dim)';
+                this.dom.outputEl.textContent = "GENERATING ENTROPY...";
+
+                try {
+                    let cryptoKey = await this.deriveHighEntropyPassword(baseStr || "fallback", requestedLen);
+                    
+                    if (mode === 'keyOnly') this.state.finalGeneratedKey = cryptoKey;
+                    else if (mode === 'append') this.state.finalGeneratedKey = baseStr + cryptoKey;
+                    else if (mode === 'prepend') this.state.finalGeneratedKey = cryptoKey + baseStr;
+                    else if (mode === 'shuffle') this.state.finalGeneratedKey = this.shuffleString(baseStr + cryptoKey);
+
+                    const generatedEntropy = requestedLen * 6; 
+                    let totalEntropy = (mode === 'keyOnly') ? generatedEntropy : this.state.currentBaseEntropy + generatedEntropy;
+                    const bruteForceData = this.calculateBruteForceTime(totalEntropy);
+
+                    // Delay slightly to allow loading text to be read
+                    setTimeout(() => {
+                        if (this.state.finalGeneratedKey) {
+                            this.dom.outputEl.textContent = '•'.repeat(Math.min(this.state.finalGeneratedKey.length, 64)) + (this.state.finalGeneratedKey.length > 64 ? '...' : '');
+                            this.dom.toggleVisBtn.classList.remove('hidden');
+                        } else {
+                            this.dom.outputEl.textContent = "ERR: 0 LENGTH OUTPUT";
+                        }
+
+                        this.dom.outLength.textContent = this.state.finalGeneratedKey.length;
+                        this.dom.outEntropy.textContent = `${totalEntropy}-bit`;
+                        this.dom.outTime.textContent = bruteForceData.text;
+                        this.dom.outTime.style.color = bruteForceData.color;
+                        
+                        this.dom.outputEl.style.color = this.state.finalGeneratedKey ? 'var(--accent)' : 'var(--accent-danger)';
+                        if (this.state.finalGeneratedKey) this.dom.outputEl.classList.add('ready');
+
+                        anime({ targets: this.dom.outputEl, opacity: [0, 1], translateY: [-10, 0], duration: 800, easing: 'easeOutExpo' });
+                    }, 400);
+
+                } catch (err) {
+                    console.error(err);
+                    this.dom.outputEl.classList.remove('ready');
+                    this.state.finalGeneratedKey = "";
+                    this.dom.outputEl.style.color = 'var(--accent-danger)';
+                    this.dom.outputEl.textContent = "CRYPTOGRAPHIC FAILURE";
+                }
+            }
+
+            entranceAnimation() {
+                anime({ targets: '.dashboard', translateY: [50, 0], opacity: [0, 1], duration: 1200, easing: 'easeOutCirc' });
+            }
+        }
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', () => new SystemVault());
+    </script>
+</body>
+</html>
