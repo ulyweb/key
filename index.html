@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Vault | Enterprise Key Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            var(--bg-color): #030508;
+            --panel-bg: rgba(13, 17, 28, 0.65);
+            --accent: #00E6B8;
+            --accent-glow: rgba(0, 230, 184, 0.4);
+            --accent-danger: #FF4D4D;
+            --accent-warn: #FFB84D;
+            --text-main: #E2E8F0;
+            --text-dim: #8B9BB4;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-highlight: rgba(0, 230, 184, 0.5);
+            --input-bg: rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --bg-color: #F0F4F8;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --accent: #0284C7;
+            --accent-glow: rgba(2, 132, 199, 0.4);
+            --accent-danger: #E11D48;
+            --accent-warn: #D97706;
+            --text-main: #1E293B;
+            --text-dim: #64748B;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --border-highlight: rgba(2, 132, 199, 0.5);
+            --input-bg: rgba(241, 245, 249, 0.7);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        #networkCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; }
+
+        .dashboard {
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 35px 45px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            margin: 40px 0;
+            opacity: 0;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        #clockDisplay { font-weight: 600; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+        .theme-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: var(--text-main); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 500; transition: all 0.2s ease; }
+        .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        h2 { font-family: 'Inter', sans-serif; color: var(--text-main); text-transform: uppercase; letter-spacing: -0.03em; text-align: center; margin-top: 0; font-weight: 800; font-size: 2.2em; margin-bottom: 35px; }
+        h2 span { color: var(--accent); font-weight: 400; }
+
+        .control-panel { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 25px; }
+        .mode-toggle { flex: 1; display: flex; gap: 10px; }
+        .mode-btn { flex: 1; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-dim); padding: 12px; cursor: pointer; border-radius: 8px; font-family: inherit; font-weight: 600; transition: all 0.3s ease; }
+        .mode-btn.active { background: rgba(0, 230, 184, 0.1); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
+        [data-theme="light"] .mode-btn.active { background: rgba(2, 132, 199, 0.1); }
+
+        .input-group { margin-bottom: 22px; width: 100%; }
+        label { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-dim); font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;}
+        input[type="text"], input[type="password"], select { width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); padding: 14px; font-size: 1.05em; font-family: 'Inter', sans-serif; font-weight: 500; border-radius: 8px; box-sizing: border-box; outline: none; transition: all 0.3s ease; }
+        select { cursor: pointer; appearance: none; font-family: inherit;}
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+        .meter-container { margin-top: 10px; height: 6px; background: rgba(0, 0, 0, 0.3); border-radius: 3px; overflow: hidden; }
+        .meter-bar { height: 100%; width: 0%; background: var(--accent-danger); transition: width 0.4s ease, background-color 0.4s ease; }
+        .base-stats { font-size: 0.75em; color: var(--text-dim); margin-top: 6px; text-align: right; text-transform: uppercase; font-weight: 500;}
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; margin-top: 5px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--accent-glow); border: 2px solid var(--bg-color);}
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: var(--border-color); border-radius: 2px; }
+
+        .settings-row { display: flex; gap: 20px; }
+        .hidden-panel { display: none; }
+
+        .button-group { display: flex; gap: 15px; margin-top: 15px; }
+        button.action-btn { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); padding: 16px; font-size: 0.95em; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; border-radius: 8px; font-weight: 700; transition: all 0.3s ease; }
+        #generateBtn { flex: 2; background: var(--accent); color: #000; border: none; box-shadow: 0 4px 15px var(--accent-glow);}
+        #generateBtn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); }
+        #resetBtn { flex: 1; border-color: rgba(255, 77, 77, 0.3); color: var(--accent-danger); }
+
+        .output-container { margin-top: 35px; padding: 25px; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; text-align: center; position: relative; overflow: hidden; }
+        .output-text { color: var(--text-dim); font-size: 1.25em; font-family: 'Courier New', Courier, monospace; letter-spacing: 2px; word-break: break-all; cursor: pointer; padding: 15px; border-radius: 6px; max-height: 150px; overflow-y: auto; transition: all 0.2s ease; }
+        .output-text.ready { color: var(--accent); text-shadow: 0 0 8px var(--accent-glow);}
+        .visibility-toggle { position: absolute; bottom: 12px; right: 20px; background: none; border: none; color: var(--text-dim); font-size: 0.75em; cursor: pointer; text-transform: uppercase; padding: 5px; font-weight: 700; font-family: inherit;}
+        .visibility-toggle.hidden { display: none; }
+
+        .output-metrics { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 0.8em; color: var(--text-dim); border-top: 1px solid var(--border-color); padding-top: 20px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;}
+        .metrics-row-top { display: flex; justify-content: space-around; }
+        .metrics-row-bottom { margin-top: 5px; text-align: center;}
+        .metric span { color: var(--text-main); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1.1em;}
+        .score-zxcvbn { color: var(--accent); }
+
+        .copy-notification { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); background: var(--text-main); color: var(--bg-color); padding: 6px 15px; border-radius: 4px; font-size: 0.75em; font-weight: 800; text-transform: uppercase; opacity: 0; pointer-events: none;}
+    </style>
+</head>
+<body>
+    <canvas id="networkCanvas"></canvas>
+    <div class="dashboard">
+        <div class="header-controls">
+            <div id="clockDisplay">00:00:00 UTC</div>
+            <button class="theme-btn" id="themeToggle">☀️ Light Mode</button>
+        </div>
+        <h2>System <span>Vault</span> Admin</h2>
+        <div class="control-panel">
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="modePassword">Cryptographic String</button>
+                <button class="mode-btn" id="modePassphrase">Secure Passphrase</button>
+            </div>
+        </div>
+        
+        <div class="input-group">
+            <label><span>Base Modifier (Optional)</span> <span id="baseQuality">Quality: LOW</span></label>
+            <input type="password" id="basePassword" placeholder="Enter custom base entropy..." autocomplete="off">
+            <div class="meter-container"><div class="meter-bar" id="meterBar"></div></div>
+            <div class="base-stats" id="baseStats">Hybrid Score: 0 bits</div>
+        </div>
+
+        <div id="passwordSettings">
+            <div class="input-group">
+                <label><span>Generated Length</span> <span id="lengthValDisplay" style="color: var(--accent); font-weight: 700;">44</span></label>
+                <input type="range" id="lengthSlider" min="8" max="256" value="44">
+            </div>
+        </div>
+
+        <div id="passphraseSettings" class="hidden-panel">
+            <div class="settings-row">
+                <div class="input-group">
+                    <label><span>Word Count</span> <span id="wordValDisplay" style="color: var(--accent); font-weight: 700;">6</span></label>
+                    <input type="range" id="wordSlider" min="3" max="24" value="6">
+                </div>
+                <div class="input-group">
+                    <label>Separator</label>
+                    <select id="separatorMode">
+                        <option value="-">Dash (-)</option>
+                        <option value="_">Underscore (_)</option>
+                        <option value=" ">Space ( )</option>
+                        <option value=".">Period (.)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>Integration Mode</label>
+            <select id="combineMode">
+                <option value="keyOnly">Isolated (Generated Output Only)</option>
+                <option value="append" selected>Append (Base + Generated)</option>
+                <option value="prepend">Prepend (Generated + Base)</option>
+                <option value="shuffle">Fisher-Yates Mix (Shuffle Both)</option>
+            </select>
+        </div>
+
+        <div class="button-group">
+            <button class="action-btn" id="generateBtn">Deploy Entropy</button>
+            <button class="action-btn" id="resetBtn">Purge Memory</button>
+        </div>
+
+        <div class="output-container" id="terminalContainer">
+            <div class="copy-notification" id="copyNotification">COPIED TO CLIPBOARD</div>
+            <div class="output-text" id="output" title="Click to copy">AWAITING DEPLOYMENT...</div>
+            <button id="toggleVisibilityBtn" class="visibility-toggle hidden">👁️ Reveal</button>
+            <div class="output-metrics" id="outputMetrics">
+                <div class="metrics-row-top">
+                    <div class="metric" title="True mathematical entropy">CSPRNG Entropy: <span id="outEntropyRaw" class="score-raw">0-bit</span></div>
+                    <div class="metric" title="Hybrid heuristic calculation matching modern password managers">KeePassXC/Hybrid Rating: <span id="outEntropyKeePass" class="score-zxcvbn">0-bit</span></div>
+                </div>
+                <div class="metrics-row-bottom">
+                    <div class="metric">Est. Brute Force (RTX 6000 Ada, bcrypt 10): <span id="outTime" style="color: var(--accent)">INFINITY</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class ParticleNetwork {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.isDark = true;
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                this.initParticles();
+                this.animate();
+            }
+            resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
+            setTheme(isDark) { this.isDark = isDark; }
+            initParticles() {
+                const count = Math.floor((window.innerWidth * window.innerHeight) / 15000);
+                for (let i = 0; i < count; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width, y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, radius: Math.random() * 2 + 1
+                    });
+                }
+            }
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                const colorBase = this.isDark ? '0, 230, 184' : '2, 132, 199';
+                for (let i = 0; i < this.particles.length; i++) {
+                    let p = this.particles[i];
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0 || p.x > this.canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > this.canvas.height) p.vy *= -1;
+                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(${colorBase}, 0.3)`; this.ctx.fill();
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        let p2 = this.particles[j];
+                        let dist = Math.sqrt(Math.pow(p.x - p2.x, 2) + Math.pow(p.y - p2.y, 2));
+                        if (dist < 120) {
+                            this.ctx.beginPath(); this.ctx.moveTo(p.x, p.y); this.ctx.lineTo(p2.x, p2.y);
+                            this.ctx.strokeStyle = `rgba(${colorBase}, ${0.15 - dist/800})`; this.ctx.stroke();
+                        }
+                    }
+                }
+            }
+        }
+
+        const rawWordlist = "abandon ability absent absorb abstract absurd abuse access accident account accuse achieve acquire across action actor actual adapt addict address adjust admit adult advance advice aerobic affair afford afraid agency agenda agent agree ahead airport aisle alarm album alcohol alert alien alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer apology appear apple approve april arch arctic area arena argue armed armor army around arrange arrest arrive arrow artefact artist artwork aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis bachelor bacon badge balance balcony bamboo banana banner barely bargain barrel base basic basket battle beach bean bear beat beautiful beauty become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bike bind biology bird birth bitter black blade blame blanket blast bleak blind blood blossom blouse blue blur board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget building bulb bulk bullet bunker burden burger burn burst business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp canal cancel candy cannon canoe canvas canyon capable capital captain carbon card cargo carpet carry cart case cash casino castle catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clue coach coal coast coat cobble coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cover cradle craft cramp crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crowd crown crucial cruel cruise crumble crunch crush crystal culture cupboard curious current curtain curve cushion custom cute cycle damage damp dance danger daring dash daughter dawn deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enclose enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example exceed exchange excite exclude excuse execute exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eyebrow fabric face facility fact fade faint faith fall false fame family famous fancy fantasy farm fashion fatal father fatigue fault favorite feature february federal feed feel female fence festival fetch fever fiber fiction field figure file film filter final find fine finger finish fire firm first fitness fixed flag flame flash flat flavor fleet flesh flight flock floor flower fluid flush focus foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fraction frame frequent fresh friend fringe frog front frost frown frozen fruit fuel funny furnace fury future gadget gain galaxy gallery game garage garbage garden garlic garment gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gym habit hair half hammer hamster hand happy harbor hard harsh harvest hawk hazard head health heart heavy hedgehog height hello helmet help hero hidden high hill hint hire history hobby hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover huge human humble humor hundred hungry hunt hurdle hurry husband hybrid icon idea identify idle ignore illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant infection infer info initial inject injury inmate inner innocent input inquire insane insect inside inspire install instance instead integrity intellect intend intense intent interact interest interfere internal interpret intersect intervene invade invent invest investigate invite iron island isolate issue item ivory jacket jaguar jargon jazz jealous jeans jelly jewel join joke journey judge juice jump jungle junior junk just kangaroo keen keep ketchup kick kidney kind kingdom kiss kitchen kite kitten kiwi knee knife knock know label labor ladder lady lake lamp language laptop large laser late laugh laundry lava lawn lawsuit lazy lead leader leaf league leak lean leap learn leave lecture left legacy legal legend lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit limp line link lion liquid list little live lizard load loan local lock locomotive logic lonely long loop lottery loud lounge love loyal luck luggage lumber lunar lunch lyrics machine mad magic magnet maid mail main major make mammal manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media medical meet melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mixed mixture mobile model modify moment momentum money monkey monster month moon moral more morning mosquito mother motion motor mountain mouse mouth move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest network neutral never news next nice night nightingale nine ninja north nose note nothing notice novel nuclear number nurse oasis oath obedience object oblige obscure observe obsess obtain obvious occur ocean october odor offer office offset often okay olive olympic omit once onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican penalty pencil people pepper perfect permit person photo piano picnic picture piece pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge plenty plot plug plunge poem poet point polar pole police pond pony pool poor popular portion position possible post potato potion pound poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promise promote proof property prosper protect proud provide public pudding pull pulp pulse pump punch pupil puppy purchase pure purpose purse push puzzle pyramid quality quantum quarter question quick quit quiz quota rabbit race rack radar radio rail rain raise rally random range rapid rare rate rather raven react read ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude ruin rumble runway rural rush rust safe sail salad salmon salon salt same sample sand satisfy sato sauce sausage save scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrink shrug shuffle sibling sick side siege sigh sight sign silent silk silly silver similar simple since sing siren sister situate skate sketch skill skin skirt skull slab slam sleep slender slice slide slight slim slip slow smash smell smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solve someone song soon sorry sort soul sound soup source south space spare speak special speed spell spend spirit split spoil sponsor spoon sport spot spray spread spring square squeeze squirrel stadium staff stage stair stamp stand star start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy straw stream street strength strict strike string strip strong struggle student stuff style subject submit subway success such sudden suffer sugar suggest suit summer sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tail talent talk tall tank tape target task taste tattoo taxi teach team tech temple tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tired tissue title toast tobacco today toddler together toilet token tomato tomorrow tone tongue tonight tool tooth topic topple torch tornado tortoise toss total tourist tournament tower town toxic trace track trade traffic tragic train trait trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble true truly trumpet trust truth tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twin twist type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage used useful useless usual utility vacant vacuum vague valid valley valve vanish vapor variance variant variation variety vector vehicle velvet vendor venture verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave wealth weapon wear weasel weather wedding weekend weird welcome west whale what wheat wheel when where whip whisper wide width wife wild will wind window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow young youth zebra zero zone zoo";
+
+        class SystemVault {
+            constructor() {
+                this.state = {
+                    mode: 'password',
+                    finalGeneratedKey: "",
+                    isKeyHidden: true,
+                    isDarkMode: true,
+                    wordlist: [...new Set(rawWordlist.split(' ').filter(word => word.length > 4))]
+                };
+                this.bgEngine = new ParticleNetwork('networkCanvas');
+                this.cacheDOM();
+                this.bindEvents();
+                this.initClock();
+                setTimeout(() => this.entranceAnimation(), 100);
+            }
+
+            cacheDOM() {
+                this.dom = {
+                    clock: document.getElementById('clockDisplay'), themeToggle: document.getElementById('themeToggle'),
+                    modeBtns: document.querySelectorAll('.mode-btn'), passSettings: document.getElementById('passwordSettings'),
+                    phraseSettings: document.getElementById('passphraseSettings'), baseInput: document.getElementById('basePassword'),
+                    meterBar: document.getElementById('meterBar'), baseStats: document.getElementById('baseStats'),
+                    baseQuality: document.getElementById('baseQuality'), lengthSlider: document.getElementById('lengthSlider'),
+                    lengthValDisplay: document.getElementById('lengthValDisplay'), wordSlider: document.getElementById('wordSlider'),
+                    wordValDisplay: document.getElementById('wordValDisplay'), separatorMode: document.getElementById('separatorMode'),
+                    combineMode: document.getElementById('combineMode'), generateBtn: document.getElementById('generateBtn'),
+                    resetBtn: document.getElementById('resetBtn'), outputEl: document.getElementById('output'),
+                    toggleVisBtn: document.getElementById('toggleVisibilityBtn'), copyNotif: document.getElementById('copyNotification'),
+                    outEntropyRaw: document.getElementById('outEntropyRaw'), outEntropyKeePass: document.getElementById('outEntropyKeePass'),
+                    outTime: document.getElementById('outTime')
+                };
+            }
+
+            bindEvents() {
+                this.dom.themeToggle.addEventListener('click', () => this.toggleTheme());
+                this.dom.modeBtns.forEach(btn => btn.addEventListener('click', (e) => this.switchMode(e.target.id === 'modePassword' ? 'password' : 'passphrase')));
+                this.dom.lengthSlider.addEventListener('input', (e) => this.dom.lengthValDisplay.textContent = e.target.value);
+                this.dom.wordSlider.addEventListener('input', (e) => this.dom.wordValDisplay.textContent = e.target.value);
+                this.dom.baseInput.addEventListener('input', (e) => this.updateBaseEntropyUI(e.target.value));
+                this.dom.toggleVisBtn.addEventListener('click', () => this.toggleVisibility());
+                this.dom.outputEl.addEventListener('click', () => this.copyToClipboard());
+                this.dom.resetBtn.addEventListener('click', () => this.resetVault());
+                this.dom.generateBtn.addEventListener('click', () => this.generateKey());
+            }
+
+            switchMode(newMode) {
+                this.state.mode = newMode;
+                this.dom.modeBtns.forEach(btn => btn.classList.remove('active'));
+                if (newMode === 'password') {
+                    document.getElementById('modePassword').classList.add('active');
+                    this.dom.passSettings.classList.remove('hidden-panel');
+                    this.dom.phraseSettings.classList.add('hidden-panel');
+                } else {
+                    document.getElementById('modePassphrase').classList.add('active');
+                    this.dom.passSettings.classList.add('hidden-panel');
+                    this.dom.phraseSettings.classList.remove('hidden-panel');
+                }
+            }
+
+            initClock() {
+                const tick = () => this.dom.clock.textContent = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+                tick(); setInterval(tick, 1000);
+            }
+
+            toggleTheme() {
+                this.state.isDarkMode = !this.state.isDarkMode;
+                this.bgEngine.setTheme(this.state.isDarkMode);
+                if (this.state.isDarkMode) {
+                    document.documentElement.removeAttribute('data-theme');
+                    this.dom.themeToggle.textContent = "☀️ Light Mode";
+                } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    this.dom.themeToggle.textContent = "🌙 Dark Mode";
+                }
+            }
+
+            // The KeePassXC Hybrid Estimator logic
+            calculateHybridEntropy(password) {
+                if (!password) return 0;
+                let zxcvbnBits = 0;
+                if (typeof zxcvbn !== 'undefined') {
+                    zxcvbnBits = Math.max(0, Math.round(Math.log2(zxcvbn(password).guesses)));
+                }
+                
+                // Shannon Pool Calculation
+                let poolSize = 0;
+                if (/[a-z]/.test(password)) poolSize += 26;
+                if (/[A-Z]/.test(password)) poolSize += 26;
+                if (/[0-9]/.test(password)) poolSize += 10;
+                if (/[^a-zA-Z0-9]/.test(password)) poolSize += 32; // basic symbol pool
+                
+                let shannonBits = password.length > 0 ? Math.round(password.length * Math.log2(poolSize)) : 0;
+                
+                // Hybrid Logic: For long, high-variance strings, zxcvbn often fails to account for randomness.
+                // KeePassXC style logic prioritizes the higher mathematically valid metric for generated strings.
+                return Math.max(zxcvbnBits, shannonBits);
+            }
+
+            updateBaseEntropyUI(pwd) {
+                let hybridBits = this.calculateHybridEntropy(pwd);
+                this.dom.baseStats.textContent = `Hybrid Score: ${hybridBits} bits | Length: ${pwd.length}`;
+                
+                let width = Math.min((hybridBits / 128) * 100, 100);
+                this.dom.meterBar.style.width = `${width}%`;
+                
+                const colors = { low: 'var(--accent-danger)', warn: 'var(--accent-warn)', strong: 'var(--accent)' };
+                let status = hybridBits < 40 ? 'low' : hybridBits < 80 ? 'warn' : 'strong';
+                this.dom.baseQuality.textContent = `Quality: ${hybridBits === 0 ? 'LOW' : status.toUpperCase()}`;
+                this.dom.meterBar.style.backgroundColor = colors[status];
+                this.dom.baseQuality.style.color = colors[status];
+            }
+
+            toggleVisibility() {
+                this.state.isKeyHidden = !this.state.isKeyHidden;
+                if (this.state.isKeyHidden) {
+                    this.dom.outputEl.textContent = '•'.repeat(Math.min(this.state.finalGeneratedKey.length, 64)) + (this.state.finalGeneratedKey.length > 64 ? '...' : '');
+                    this.dom.toggleVisBtn.textContent = "👁️ Reveal";
+                } else {
+                    this.dom.outputEl.textContent = this.state.finalGeneratedKey;
+                    this.dom.toggleVisBtn.textContent = "🙈 Hide";
+                }
+            }
+
+            copyToClipboard() {
+                if (this.state.finalGeneratedKey) {
+                    navigator.clipboard.writeText(this.state.finalGeneratedKey).then(() => {
+                        anime({ targets: this.dom.copyNotif, opacity: [0, 1, 1, 0], translateY: [10, -10, -10, -30], duration: 1800, easing: 'easeOutExpo' });
+                    });
+                }
+            }
+
+            resetVault() {
+                anime({ targets: this.dom.resetBtn, scale: [0.95, 1], duration: 300, easing: 'easeOutQuad' });
+                this.dom.baseInput.value = "";
+                this.dom.lengthSlider.value = 44; this.dom.lengthValDisplay.textContent = "44";
+                this.dom.wordSlider.value = 6; this.dom.wordValDisplay.textContent = "6";
+                this.dom.combineMode.value = "append";
+                this.state.finalGeneratedKey = "";
+                this.state.isKeyHidden = true;
+                this.updateBaseEntropyUI("");
+                this.dom.outputEl.classList.remove('ready');
+                this.dom.toggleVisBtn.classList.add('hidden');
+                this.dom.outputEl.style.color = 'var(--text-dim)';
+                this.dom.outputEl.textContent = "AWAITING DEPLOYMENT...";
+                this.dom.outEntropyRaw.textContent = "0-bit";
+                this.dom.outEntropyKeePass.textContent = "0-bit";
+                this.dom.outTime.textContent = "INFINITY";
+                this.dom.outTime.style.color = "var(--accent)";
+            }
+
+            calculateBruteForceTime(totalEntropyBits) {
+                if (totalEntropyBits > 80) return { text: "INFINITY", color: "var(--accent)" };
+                if (totalEntropyBits === 0) return { text: "INSTANT", color: "var(--accent-danger)" };
+                const seconds = Math.pow(2, totalEntropyBits) / 150000;
+                if (seconds < 1) return { text: "< 1 SECOND", color: "var(--accent-danger)" };
+                if (seconds < 60) return { text: `${Math.round(seconds)} SECONDS`, color: "var(--accent-danger)" };
+                if (seconds < 3600) return { text: `${Math.round(seconds/60)} MINUTES`, color: "var(--accent-warn)" };
+                if (seconds < 86400) return { text: `${Math.round(seconds/3600)} HOURS`, color: "var(--accent-warn)" };
+                if (seconds < 31536000) return { text: `${Math.round(seconds/86400)} DAYS`, color: "var(--accent)" };
+                return { text: `${Math.round(seconds/31536000).toLocaleString()} YEARS`, color: "var(--accent)" };
+            }
+
+            async generatePasswordString(basePassword, desiredLength) {
+                if (desiredLength === 0) return "";
+                const bitsRequired = Math.ceil((desiredLength * 6) / 8) * 8;
+                const encoder = new TextEncoder();
+                const keyMaterial = await window.crypto.subtle.importKey("raw", encoder.encode(basePassword), { name: "PBKDF2" }, false, ["deriveBits"]);
+                const salt = window.crypto.getRandomValues(new Uint8Array(32));
+                const derivedBits = await window.crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, bitsRequired);
+                return btoa(String.fromCharCode(...new Uint8Array(derivedBits))).slice(0, desiredLength);
+            }
+
+            generatePassphrase(wordCount, separator) {
+                const words = [];
+                const randomArray = new Uint32Array(wordCount);
+                window.crypto.getRandomValues(randomArray);
+                for (let i = 0; i < wordCount; i++) {
+                    const randomIndex = randomArray[i] % this.state.wordlist.length;
+                    words.push(this.state.wordlist[randomIndex]);
+                }
+                return words.join(separator);
+            }
+
+            shuffleString(str) {
+                let arr = str.split('');
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr.join('');
+            }
+
+            async generateKey() {
+                const baseStr = this.dom.baseInput.value;
+                const mode = this.dom.combineMode.value;
+
+                this.dom.toggleVisBtn.classList.add('hidden');
+                if (!baseStr && mode !== 'keyOnly') {
+                    this.dom.outputEl.classList.remove('ready');
+                    this.state.finalGeneratedKey = "";
+                    this.dom.outputEl.style.color = 'var(--accent-danger)';
+                    this.dom.outputEl.textContent = "ERR: BASE STRING REQUIRED FOR MIXING";
+                    return;
+                }
+
+                this.dom.outputEl.classList.remove('ready');
+                this.state.finalGeneratedKey = "";
+                this.state.isKeyHidden = true; 
+                this.dom.toggleVisBtn.textContent = "👁️ Reveal";
+                this.dom.outputEl.style.color = 'var(--text-dim)';
+                this.dom.outputEl.textContent = "GENERATING ENTROPY...";
+
+                try {
+                    let cryptoCore = "";
+                    let rawGeneratedEntropy = 0;
+
+                    if (this.state.mode === 'password') {
+                        const requestedLen = parseInt(this.dom.lengthSlider.value, 10);
+                        cryptoCore = await this.generatePasswordString(baseStr || "fallback", requestedLen);
+                        rawGeneratedEntropy = requestedLen * 6; 
+                    } else {
+                        const wordCount = parseInt(this.dom.wordSlider.value, 10);
+                        const separator = this.dom.separatorMode.value;
+                        cryptoCore = this.generatePassphrase(wordCount, separator);
+                        rawGeneratedEntropy = Math.round(wordCount * Math.log2(this.state.wordlist.length));
+                    }
+                    
+                    if (mode === 'keyOnly') this.state.finalGeneratedKey = cryptoCore;
+                    else if (mode === 'append') this.state.finalGeneratedKey = baseStr + cryptoCore;
+                    else if (mode === 'prepend') this.state.finalGeneratedKey = cryptoCore + baseStr;
+                    else if (mode === 'shuffle') this.state.finalGeneratedKey = this.shuffleString(baseStr + cryptoCore);
+
+                    // Combine base entropy mathematically for the raw score
+                    let poolSize = 0;
+                    if (/[a-z]/.test(baseStr)) poolSize += 26;
+                    if (/[A-Z]/.test(baseStr)) poolSize += 26;
+                    if (/[0-9]/.test(baseStr)) poolSize += 10;
+                    if (/[^a-zA-Z0-9]/.test(baseStr)) poolSize += 32;
+                    let rawBaseEntropy = baseStr.length > 0 ? Math.round(baseStr.length * Math.log2(poolSize)) : 0;
+                    
+                    let totalRawEntropy = (mode === 'keyOnly') ? rawGeneratedEntropy : rawBaseEntropy + rawGeneratedEntropy;
+                    
+                    // Use the new Hybrid Estimator
+                    let totalHybridEntropy = this.calculateHybridEntropy(this.state.finalGeneratedKey);
+                    const bruteForceData = this.calculateBruteForceTime(totalHybridEntropy);
+
+                    setTimeout(() => {
+                        if (this.state.finalGeneratedKey) {
+                            this.dom.outputEl.textContent = '•'.repeat(Math.min(this.state.finalGeneratedKey.length, 64)) + (this.state.finalGeneratedKey.length > 64 ? '...' : '');
+                            this.dom.toggleVisBtn.classList.remove('hidden');
+                        } else {
+                            this.dom.outputEl.textContent = "ERR: 0 LENGTH OUTPUT";
+                        }
+
+                        this.dom.outEntropyRaw.textContent = `${totalRawEntropy}-bit`;
+                        this.dom.outEntropyKeePass.textContent = `${totalHybridEntropy}-bit`;
+                        this.dom.outTime.textContent = bruteForceData.text;
+                        this.dom.outTime.style.color = bruteForceData.color;
+                        
+                        this.dom.outputEl.style.color = this.state.finalGeneratedKey ? 'var(--accent)' : 'var(--accent-danger)';
+                        if (this.state.finalGeneratedKey) this.dom.outputEl.classList.add('ready');
+
+                        anime({ targets: this.dom.outputEl, opacity: [0, 1], translateY: [-5, 0], duration: 400, easing: 'easeOutQuad' });
+                    }, 400);
+
+                } catch (err) {
+                    console.error(err);
+                    this.dom.outputEl.classList.remove('ready');
+                    this.state.finalGeneratedKey = "";
+                    this.dom.outputEl.style.color = 'var(--accent-danger)';
+                    this.dom.outputEl.textContent = "CRYPTOGRAPHIC FAILURE";
+                }
+            }
+
+            entranceAnimation() {
+                anime({ targets: '.dashboard', translateY: [30, 0], opacity: [0, 1], duration: 1000, easing: 'easeOutExpo' });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => new SystemVault());
+    </script>
+</body>
+</html>
