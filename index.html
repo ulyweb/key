@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Vault | High-Entropy Generator</title>
+    <!-- Online Version: Loading Anime.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0d12;
+            --panel-bg: #16161e;
+            --accent: #00ffcc;
+            --accent-hover: #00cca3;
+            --accent-warn: #ff9e64;
+            --accent-danger: #f7768e;
+            --text-main: #a9b1d6;
+            --text-dim: #565f89;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            background-color: var(--panel-bg);
+            border: 1px solid #292e42;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 650px;
+            box-shadow: 0 0 30px rgba(0, 255, 204, 0.05), inset 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            max-height: 95vh;
+            overflow-y: auto;
+            opacity: 0; /* For entrance animation */
+        }
+
+        .dashboard::-webkit-scrollbar { width: 8px; }
+        .dashboard::-webkit-scrollbar-thumb { background-color: #292e42; border-radius: 4px; }
+
+        h2 {
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 0;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+            text-align: center;
+        }
+
+        .input-group { margin-bottom: 20px; position: relative; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            background: #0a0a0f;
+            border: 1px solid #292e42;
+            color: var(--accent);
+            padding: 12px;
+            font-size: 1.1em;
+            font-family: inherit;
+            border-radius: 6px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2300ffcc%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px top 50%;
+            background-size: 12px auto;
+        }
+
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 255, 204, 0.2); }
+
+        .meter-container { margin-top: 8px; height: 4px; background: #0a0a0f; border-radius: 2px; overflow: hidden; }
+        .meter-bar { height: 100%; width: 0%; background: var(--accent-danger); transition: width 0.3s ease, background-color 0.3s ease; }
+        .base-stats { font-size: 0.8em; color: var(--text-dim); margin-top: 5px; text-align: right; }
+
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; margin-top: 5px; margin-bottom: 5px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; margin-top: -7px; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #292e42; border-radius: 2px; }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            padding: 15px;
+            font-size: 1.1em;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: color 0.3s ease;
+        }
+
+        #generateBtn { flex: 2; }
+        #generateBtn:hover { background: var(--accent); color: var(--bg-color); box-shadow: 0 0 20px rgba(0, 255, 204, 0.4); }
+        
+        #resetBtn { 
+            flex: 1; 
+            border-color: var(--accent-danger); 
+            color: var(--accent-danger); 
+            font-size: 0.9em;
+        }
+        #resetBtn:hover { background: var(--accent-danger); color: var(--bg-color); box-shadow: 0 0 20px rgba(247, 118, 142, 0.4); }
+
+        .output-container {
+            margin-top: 30px;
+            padding: 20px 20px 40px 20px;
+            background: #0a0a0f;
+            border: 1px dashed var(--text-dim);
+            border-radius: 6px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .output-text {
+            color: var(--text-dim);
+            font-size: 1.2em;
+            letter-spacing: 2px;
+            word-break: break-all;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 150px;
+            overflow-y: auto;
+            transition: background-color 0.2s ease;
+        }
+
+        .output-text::-webkit-scrollbar { width: 4px; }
+        .output-text::-webkit-scrollbar-thumb { background-color: var(--accent); border-radius: 2px; }
+        .output-text.ready:hover { background-color: rgba(0, 255, 204, 0.1); }
+
+        .visibility-toggle {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 0.8em;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 5px;
+            transition: color 0.2s ease;
+        }
+        
+        .visibility-toggle:hover { color: var(--text-main); }
+        .visibility-toggle.hidden { display: none; }
+
+        .output-metrics {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            border-top: 1px solid #292e42;
+            padding-top: 15px;
+            opacity: 0;
+        }
+
+        .metrics-row-top { display: flex; justify-content: space-around; }
+        .metrics-row-bottom { margin-top: 5px; }
+        .metric span { color: var(--text-main); font-weight: bold; }
+        
+        .copy-notification {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: var(--bg-color);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <h2>System Vault Admin</h2>
+        
+        <div class="input-group">
+            <label><span>Base Password</span> <span id="baseQuality">Quality: LOW</span></label>
+            <input type="password" id="basePassword" placeholder="Enter base string..." autocomplete="off">
+            <div class="meter-container">
+                <div class="meter-bar" id="meterBar"></div>
+            </div>
+            <div class="base-stats" id="baseStats">Entropy: 0 bits | Chars: 0</div>
+        </div>
+
+        <div class="input-group">
+            <label><span>Generated Length</span> <span id="lengthValDisplay" style="color: var(--accent); font-weight: bold;">44</span></label>
+            <input type="range" id="lengthSlider" min="0" max="500" value="44">
+        </div>
+
+        <div class="input-group">
+            <label>Combination Mode</label>
+            <select id="combineMode">
+                <option value="keyOnly">Generated Key Only</option>
+                <option value="append" selected>Base + Generated Key</option>
+                <option value="prepend">Generated Key + Base</option>
+                <option value="shuffle">Random Mix (Shuffle Both)</option>
+            </select>
+        </div>
+
+        <div class="button-group">
+            <button id="generateBtn">Generate Secure Key</button>
+            <button id="resetBtn">Reset Vault</button>
+        </div>
+
+        <div class="output-container">
+            <div class="copy-notification" id="copyNotification">COPIED TO CLIPBOARD</div>
+            <div class="output-text" id="output" title="Click to copy">WAITING FOR INPUT...</div>
+            <button id="toggleVisibilityBtn" class="visibility-toggle hidden">👁️ Reveal</button>
+            <div class="output-metrics" id="outputMetrics">
+                <div class="metrics-row-top">
+                    <div class="metric">Final Entropy: <span id="outEntropy">0-bit</span></div>
+                    <div class="metric">Total Length: <span id="outLength">0</span></div>
+                </div>
+                <div class="metrics-row-bottom">
+                    <div class="metric">Brute Force Time (12x RTX 5090, bcrypt 10): <span id="outTime" style="color: var(--accent)">INFINITY</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBaseEntropy = 0;
+        let finalGeneratedKey = "";
+        let isKeyHidden = true;
+        
+        const lengthSlider = document.getElementById('lengthSlider');
+        const lengthValDisplay = document.getElementById('lengthValDisplay');
+        const combineMode = document.getElementById('combineMode');
+        
+        lengthSlider.addEventListener('input', (e) => lengthValDisplay.textContent = e.target.value);
+
+        const baseInput = document.getElementById('basePassword');
+        const meterBar = document.getElementById('meterBar');
+        const baseStats = document.getElementById('baseStats');
+        const baseQuality = document.getElementById('baseQuality');
+
+        // Entropy UI Updater
+        function updateEntropyUI(pwd) {
+            let poolSize = 0;
+            if (/[a-z]/.test(pwd)) poolSize += 26;
+            if (/[A-Z]/.test(pwd)) poolSize += 26;
+            if (/[0-9]/.test(pwd)) poolSize += 10;
+            if (/[^a-zA-Z0-9]/.test(pwd)) poolSize += 32;
+
+            currentBaseEntropy = pwd.length > 0 ? Math.round(pwd.length * Math.log2(poolSize)) : 0;
+            baseStats.textContent = `Entropy: ${currentBaseEntropy} bits | Chars: ${pwd.length}`;
+
+            let width = Math.min((currentBaseEntropy / 128) * 100, 100);
+            meterBar.style.width = `${width}%`;
+
+            if (currentBaseEntropy === 0) {
+                meterBar.style.width = `0%`;
+                baseQuality.textContent = 'Quality: LOW';
+                baseQuality.style.color = 'var(--accent-danger)';
+            } else if (currentBaseEntropy < 40) {
+                meterBar.style.backgroundColor = 'var(--accent-danger)';
+                baseQuality.textContent = 'Quality: LOW';
+                baseQuality.style.color = 'var(--accent-danger)';
+            } else if (currentBaseEntropy < 80) {
+                meterBar.style.backgroundColor = 'var(--accent-warn)';
+                baseQuality.textContent = 'Quality: MODERATE';
+                baseQuality.style.color = 'var(--accent-warn)';
+            } else {
+                meterBar.style.backgroundColor = 'var(--accent)';
+                baseQuality.textContent = 'Quality: STRONG';
+                baseQuality.style.color = 'var(--accent)';
+            }
+        }
+
+        baseInput.addEventListener('input', (e) => updateEntropyUI(e.target.value));
+
+        function calculateBruteForceTime(totalEntropyBits) {
+            if (totalEntropyBits > 80) return { text: "INFINITY", color: "var(--accent)" };
+            if (totalEntropyBits === 0) return { text: "INSTANT", color: "var(--accent-danger)" };
+            const seconds = Math.pow(2, totalEntropyBits) / 100000;
+            if (seconds < 1) return { text: "< 1 SECOND", color: "var(--accent-danger)" };
+            if (seconds < 60) return { text: `${Math.round(seconds)} SECONDS`, color: "var(--accent-danger)" };
+            if (seconds < 3600) return { text: `${Math.round(seconds/60)} MINUTES`, color: "var(--accent-warn)" };
+            if (seconds < 86400) return { text: `${Math.round(seconds/3600)} HOURS`, color: "var(--accent-warn)" };
+            if (seconds < 31536000) return { text: `${Math.round(seconds/86400)} DAYS`, color: "var(--accent)" };
+            return { text: `${Math.round(seconds/31536000).toLocaleString()} YEARS`, color: "var(--accent)" };
+        }
+
+        async function deriveHighEntropyPassword(basePassword, desiredLength) {
+            if (desiredLength === 0) return "";
+            const bitsRequired = Math.ceil((desiredLength * 6) / 8) * 8;
+            const encoder = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey("raw", encoder.encode(basePassword), { name: "PBKDF2" }, false, ["deriveBits"]);
+            const salt = window.crypto.getRandomValues(new Uint8Array(32));
+            const derivedBits = await window.crypto.subtle.deriveBits({ name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" }, keyMaterial, bitsRequired);
+            return btoa(String.fromCharCode(...new Uint8Array(derivedBits))).slice(0, desiredLength);
+        }
+
+        function shuffleString(str) {
+            let arr = str.split('');
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr.join('');
+        }
+
+        const generateBtn = document.getElementById('generateBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const toggleVisibilityBtn = document.getElementById('toggleVisibilityBtn');
+        const outputEl = document.getElementById('output');
+        const outputMetrics = document.getElementById('outputMetrics');
+        const copyNotification = document.getElementById('copyNotification');
+        const outLength = document.getElementById('outLength');
+        const outEntropy = document.getElementById('outEntropy');
+        const outTime = document.getElementById('outTime');
+        
+        // Visibility Toggle Logic
+        toggleVisibilityBtn.addEventListener('click', () => {
+            isKeyHidden = !isKeyHidden;
+            if (isKeyHidden) {
+                outputEl.textContent = '•'.repeat(Math.min(finalGeneratedKey.length, 64)) + (finalGeneratedKey.length > 64 ? '...' : '');
+                toggleVisibilityBtn.textContent = "👁️ Reveal";
+            } else {
+                outputEl.textContent = finalGeneratedKey;
+                toggleVisibilityBtn.textContent = "🙈 Hide";
+            }
+        });
+
+        // Copy Logic
+        outputEl.addEventListener('click', () => {
+            if (finalGeneratedKey) {
+                navigator.clipboard.writeText(finalGeneratedKey).then(() => {
+                    anime({
+                        targets: copyNotification,
+                        opacity: [0, 1, 1, 0],
+                        translateY: [10, -10, -10, -20],
+                        duration: 1500,
+                        easing: 'easeOutExpo'
+                    });
+                    
+                    anime({
+                        targets: outputEl,
+                        color: ['#00ffcc', '#ffffff', '#00ffcc'],
+                        duration: 600,
+                        easing: 'easeInOutQuad'
+                    });
+                }).catch(err => console.error("Failed to copy: ", err));
+            }
+        });
+
+        // Reset Vault Logic
+        resetBtn.addEventListener('click', () => {
+            anime({
+                targets: resetBtn,
+                scale: [0.95, 1],
+                duration: 300,
+                easing: 'easeOutQuad'
+            });
+
+            baseInput.value = "";
+            lengthSlider.value = 44;
+            lengthValDisplay.textContent = "44";
+            combineMode.value = "append";
+            
+            finalGeneratedKey = "";
+            isKeyHidden = true;
+            
+            updateEntropyUI("");
+            
+            outputEl.classList.remove('ready');
+            toggleVisibilityBtn.classList.add('hidden');
+            
+            anime({
+                targets: [outputEl, outputMetrics],
+                opacity: 0,
+                duration: 300,
+                easing: 'easeOutQuad',
+                complete: function() {
+                    outputEl.style.color = 'var(--text-dim)';
+                    outputEl.textContent = "WAITING FOR INPUT...";
+                    outEntropy.textContent = "0-bit";
+                    outLength.textContent = "0";
+                    outTime.textContent = "INFINITY";
+                    outTime.style.color = "var(--accent)";
+                    
+                    anime({
+                        targets: outputEl,
+                        opacity: 1,
+                        duration: 500,
+                        easing: 'easeInQuad'
+                    });
+                }
+            });
+        });
+
+        // Generate Logic
+        generateBtn.addEventListener('click', async () => {
+            const baseStr = baseInput.value;
+            const requestedLen = parseInt(lengthSlider.value, 10);
+            const mode = combineMode.value;
+
+            anime({
+                targets: generateBtn,
+                scale: [0.95, 1],
+                duration: 300,
+                easing: 'easeOutQuad'
+            });
+            
+            outputMetrics.style.opacity = 0;
+            toggleVisibilityBtn.classList.add('hidden');
+
+            if (!baseStr && mode !== 'keyOnly') {
+                outputEl.classList.remove('ready');
+                finalGeneratedKey = "";
+                outputEl.style.opacity = 1;
+                outputEl.style.color = 'var(--accent-danger)';
+                outputEl.textContent = "ERR: BASE STRING REQUIRED FOR MIXING";
+                return;
+            }
+
+            outputEl.classList.remove('ready');
+            finalGeneratedKey = "";
+            isKeyHidden = true; 
+            toggleVisibilityBtn.textContent = "👁️ Reveal";
+            outputEl.style.color = 'var(--text-dim)';
+            outputEl.style.opacity = 1;
+            outputEl.textContent = "GENERATING ENTROPY...";
+
+            try {
+                let cryptoKey = await deriveHighEntropyPassword(baseStr || "fallback", requestedLen);
+                
+                if (mode === 'keyOnly') finalGeneratedKey = cryptoKey;
+                else if (mode === 'append') finalGeneratedKey = baseStr + cryptoKey;
+                else if (mode === 'prepend') finalGeneratedKey = cryptoKey + baseStr;
+                else if (mode === 'shuffle') finalGeneratedKey = shuffleString(baseStr + cryptoKey);
+
+                const generatedEntropy = requestedLen * 6; 
+                let totalEntropy = (mode === 'keyOnly') ? generatedEntropy : currentBaseEntropy + generatedEntropy;
+                const bruteForceData = calculateBruteForceTime(totalEntropy);
+
+                // Display masked version
+                if (finalGeneratedKey) {
+                    outputEl.textContent = '•'.repeat(Math.min(finalGeneratedKey.length, 64)) + (finalGeneratedKey.length > 64 ? '...' : '');
+                    toggleVisibilityBtn.classList.remove('hidden');
+                } else {
+                    outputEl.textContent = "ERR: 0 LENGTH OUTPUT";
+                }
+
+                outLength.textContent = finalGeneratedKey.length;
+                outEntropy.textContent = `${totalEntropy}-bit`;
+                outTime.textContent = bruteForceData.text;
+                outTime.style.color = bruteForceData.color;
+                
+                outputEl.style.color = finalGeneratedKey ? 'var(--accent)' : 'var(--accent-danger)';
+                if (finalGeneratedKey) outputEl.classList.add('ready');
+
+                anime({
+                    targets: outputEl,
+                    opacity: [0, 1],
+                    translateY: [-10, 0],
+                    duration: 800,
+                    easing: 'easeOutExpo'
+                });
+
+                anime({
+                    targets: outputMetrics,
+                    opacity: [0, 1],
+                    translateY: [10, 0],
+                    duration: 800,
+                    delay: 200,
+                    easing: 'easeOutExpo'
+                });
+
+            } catch (err) {
+                console.error(err);
+                outputEl.classList.remove('ready');
+                finalGeneratedKey = "";
+                outputEl.style.color = 'var(--accent-danger)';
+                outputEl.textContent = "CRYPTOGRAPHIC FAILURE";
+            }
+        });
+
+        // Entrance Animation
+        anime({
+            targets: '.dashboard',
+            translateY: [50, 0],
+            opacity: [0, 1],
+            duration: 1200,
+            easing: 'easeOutCirc'
+        });
+    </script>
+</body>
+</html>
