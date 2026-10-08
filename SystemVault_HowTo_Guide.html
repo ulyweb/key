@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<title>System Vault v2.0 | How-To Guide</title>
+<style>
+:root{--bg:#05080d;--panel:#0a121c;--raise:#0f1c2b;--line:#152534;--line-2:#1e3345;--ink:#cddbe9;--dim:#8ba2b8;--muted:#5b7186;--accent:#2fe6d0;--warn:#ffb547;--danger:#ff5165;
+--mono:"Cascadia Mono","Cascadia Code",ui-monospace,Consolas,monospace;--sans:"Segoe UI Variable Text","Segoe UI Variable",-apple-system,"Segoe UI",Inter,system-ui,sans-serif;--display:"Segoe UI Variable Display","Segoe UI Variable",-apple-system,"Segoe UI",Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 80% -10%,rgba(47,230,208,.06),transparent 60%),linear-gradient(rgba(47,230,208,.06) 1px,transparent 1px) 0 0/40px 40px,linear-gradient(90deg,rgba(47,230,208,.06) 1px,transparent 1px) 0 0/40px 40px,var(--bg);color:var(--ink);font:14px/1.55 var(--sans)}
+main{max-width:860px;margin:0 auto;padding:34px 20px 60px}
+h1{font-family:var(--display);font-size:32px;margin:0 0 4px;letter-spacing:.03em}h1 span{color:var(--accent)}
+.sub{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--accent);margin-bottom:22px}
+section{background:rgba(12,22,34,.7);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;color:var(--accent)}
+code,kbd{font-family:var(--mono);font-size:12px;background:var(--raise);border:1px solid var(--line-2);border-radius:5px;padding:1px 6px}
+table{width:100%;border-collapse:collapse;font-size:13px}th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-2)}td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.warn{border-left:3px solid var(--warn);padding:8px 12px;background:rgba(255,181,71,.07);border-radius:0 8px 8px 0;color:var(--dim)}
+ol li,ul li{margin:4px 0;color:var(--dim)}li b{color:var(--ink)}
+</style>
+</head>
+<body><main>
+<div class="sub">ENTERPRISE KEY &amp; PASSWORD FORTIFICATION</div>
+<h1><span>SYSTEM</span> VAULT <small style="font-size:14px;color:var(--muted)">v2.0 &middot; How-To</small></h1>
+<p style="color:var(--dim)">Open <code>SystemVault_v2.0.html</code> in any modern browser. It is one offline file: no install, no server, no CDN.</p>
+
+<section><h2>1 &middot; Fortify a weak password</h2>
+<ol>
+<li>Press <b>Enter</b> on the welcome screen, then open <b>Fortify Password</b> (or press <kbd>F</kbd>).</li>
+<li>Type or paste the existing password. The strength meter and the <b>Weakness Report</b> update live and offline.</li>
+<li>Pick a similarity level (below) and a minimum trusted-entropy floor (64 / 80 / 96 / 128 bits).</li>
+<li>Press <b>FORTIFY</b>. Use <b>Reveal</b>, <b>Copy</b> or <b>QR</b> to deliver it.</li>
+<li><b>Change the password on the real system</b>, then <b>Purge memory</b> (<kbd>Shift</kbd>+<kbd>X</kbd>).</li>
+</ol></section>
+
+<section><h2>2 &middot; Similarity levels</h2>
+<table><tr><th>Mode</th><th>Keeps from the old password</th><th>Best for</th></tr>
+<tr><td><b>Echo</b></td><td>Recognisable words and shape. Digits and symbols are re-drawn, a random third of the letters get case flips or look-alike swaps, random characters are inserted, and a random tail is added until the floor is met.</td><td>Users who must still recognise it</td></tr>
+<tr><td><b>Shape</b></td><td>Length and class layout only. Every character is new.</td><td>Balanced</td></tr>
+<tr><td><b>Fresh</b></td><td>Nothing.</td><td>Most secure</td></tr></table>
+<p class="warn" style="margin-top:12px"><b>Honest limit:</b> anything kept from the old password adds <b>zero</b> trusted bits, because an attacker is assumed to know it. The vault counts only bits drawn from the CSPRNG and reports them as &ldquo;trusted entropy&rdquo;.</p></section>
+
+<section><h2>3 &middot; How the entropy is mixed</h2>
+<p style="color:var(--dim)">Every random byte is <code>crypto.getRandomValues &oplus; SHA-256(pool &#8741; counter)</code>. The pool is fed by pointer movement, keystroke <i>timing</i> (never key values), high-resolution timing jitter and WebCrypto digests. XOR with an independent stream cannot reduce entropy below the CSPRNG, so the extra sources are defence-in-depth. All choices use rejection sampling (no modulo bias). See <b>Entropy Sources</b> for live counters and a smoke test (monobit + runs; not a certification).</p></section>
+
+<section><h2>4 &middot; Other features</h2>
+<ul>
+<li><b>Key Generator</b> &mdash; password or EFF-wordlist passphrase (7,776 words, 12.9 bits/word), batch of 10, six integration modes with an optional base modifier (counted as weak, never as random bits).</li>
+<li><b>Airgap QR</b> &mdash; shows a result as a locally drawn QR code to move it to a phone without a clipboard.</li>
+<li><b>Policy Presets</b> &mdash; Basic / Standard / High / Vault. <b>Rotation Checklist</b> &mdash; the steps that make a new password count.</li>
+<li><b>Audit Ledger</b> &mdash; SHA-256 hash chain of metadata only. <b>Verify</b> names the first broken block.</li>
+<li><b>Walkthrough</b> &mdash; <kbd>G</kbd> for the tour, <kbd>Alt</kbd>+<kbd>P</kbd> to auto-play. <b>Command palette</b> &mdash; <kbd>Ctrl</kbd>+<kbd>K</kbd>. <b>Settings</b> &mdash; <kbd>P</kbd>.</li>
+</ul></section>
+
+<section><h2>5 &middot; Privacy &amp; safety</h2>
+<ul>
+<li>Typed passwords and generated keys are never written to storage, the ledger, exports or toasts. They are wiped on <b>Purge</b>, after the idle timeout (default 2 min) and when the tab is hidden.</li>
+<li>The only outbound request is the <b>Contact Admin</b> message you choose to send. A Content-Security-Policy in the file enforces this, and the form refuses to send text containing a password held in the tab.</li>
+<li>Printing masks all secrets. Clipboard clearing is best-effort.</li>
+<li>Use an uncompromised device. If the old password is still in use on a real account, rotate it.</li>
+</ul></section>
+
+<section><h2>7 &middot; Credits</h2><p style="color:var(--dim)">Passphrase wordlist: EFF Large Wordlist (Electronic Frontier Foundation, CC BY 3.0 US). Common-password list: SecLists 10k-most-common (MIT). The QR encoder, entropy mixer, SHA-256 and analyser are original to this file.</p></section>
+
+<section><h2>6 &middot; Shortcuts</h2>
+<table><tr><td><kbd>Ctrl+K</kbd> palette</td><td><kbd>F</kbd> fortify</td><td><kbd>1/2/3</kbd> views</td><td><kbd>W</kbd> welcome</td></tr>
+<tr><td><kbd>G</kbd> tour</td><td><kbd>V</kbd> verify ledger</td><td><kbd>E</kbd> export</td><td><kbd>T</kbd> theme</td></tr>
+<tr><td><kbd>P</kbd> settings</td><td><kbd>N</kbd> ledger note</td><td><kbd>?</kbd> all shortcuts</td><td><kbd>Esc</kbd> close</td></tr></table></section>
+</main></body></html>
