@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
-<title>System Vault v2.0 | How-To Guide</title>
+<title>System Vault v2.4 | How-To Guide</title>
 <style>
 :root{--bg:#05080d;--panel:#0a121c;--raise:#0f1c2b;--line:#152534;--line-2:#1e3345;--ink:#cddbe9;--dim:#8ba2b8;--muted:#5b7186;--accent:#2fe6d0;--warn:#ffb547;--danger:#ff5165;
 --mono:"Cascadia Mono","Cascadia Code",ui-monospace,Consolas,monospace;--sans:"Segoe UI Variable Text","Segoe UI Variable",-apple-system,"Segoe UI",Inter,system-ui,sans-serif;--display:"Segoe UI Variable Display","Segoe UI Variable",-apple-system,"Segoe UI",Inter,system-ui,sans-serif}
@@ -23,14 +23,14 @@ ol li,ul li{margin:4px 0;color:var(--dim)}li b{color:var(--ink)}
 </head>
 <body><main>
 <div class="sub">ENTERPRISE KEY &amp; PASSWORD FORTIFICATION</div>
-<h1><span>SYSTEM</span> VAULT <small style="font-size:14px;color:var(--muted)">v2.0 &middot; How-To</small></h1>
-<p style="color:var(--dim)">Open <code>SystemVault_v2.0.html</code> in any modern browser. It is one offline file: no install, no server, no CDN.</p>
+<h1><span>SYSTEM</span> VAULT <small style="font-size:14px;color:var(--muted)">v2.4 &middot; How-To</small></h1>
+<p style="color:var(--dim)">Open <code>SystemVault_v2.4.html</code> in any modern browser. It is one offline file: no install, no server, no CDN.</p>
 
 <section><h2>1 &middot; Fortify a weak password</h2>
 <ol>
 <li>Press <b>Enter</b> on the welcome screen, then open <b>Fortify Password</b> (or press <kbd>F</kbd>).</li>
-<li>Type or paste the existing password. The strength meter and the <b>Weakness Report</b> update live and offline.</li>
-<li>Pick a similarity level (below) and a minimum trusted-entropy floor (64 / 80 / 96 / 128 bits).</li>
+<li>Type or paste the existing password. The length, strength meter and the <b>Weakness Report</b> update live and offline.</li>
+<li>Pick a similarity level (below) and a minimum trusted-entropy floor (64 / 80 / 96 / 128 / 192 / 256 / 512 bits).</li>
 <li>Press <b>FORTIFY</b>. Use <b>Reveal</b>, <b>Copy</b> or <b>QR</b> to deliver it.</li>
 <li><b>Change the password on the real system</b>, then <b>Purge memory</b> (<kbd>Shift</kbd>+<kbd>X</kbd>).</li>
 </ol></section>
@@ -47,11 +47,15 @@ ol li,ul li{margin:4px 0;color:var(--dim)}li b{color:var(--ink)}
 
 <section><h2>4 &middot; Other features</h2>
 <ul>
-<li><b>Key Generator</b> &mdash; password or EFF-wordlist passphrase (7,776 words, 12.9 bits/word), batch of 10, six integration modes with an optional base modifier (counted as weak, never as random bits).</li>
+<li><b>Key Generator</b> &mdash; password or EFF-wordlist passphrase (7,776 words, 12.9 bits/word), batch of 10, seven integration modes (including <b>Embed</b>, which keeps the base whole but hides it mid-string) with an optional base modifier (counted as weak, never as random bits).</li>
+<li><b>Character Set</b> &mdash; choose lowercase, uppercase, digits, braces, punctuation, dashes, math, logograms, quotes or extended (Latin-1) groups, add your own characters and exclude any you do not want. Pools are de-duplicated and trusted bits are computed from the real pool size.</li>
+<li><b>Pattern lock input</b> &mdash; in Fortify choose <i>Draw a pattern</i>, or use a pattern as the generator's base modifier. Grids from 3&times;3 to 6&times;6 follow Android rules (min. 4 dots, no jumping over unused dots). A 3&times;3 pattern has only 389,112 possibilities (about 18.6 bits), so it is scored as weak and always fortified into a Fresh random password. Patterns stay in memory only, are hidden after drawing, and never print.</li>
 <li><b>Airgap QR</b> &mdash; shows a result as a locally drawn QR code to move it to a phone without a clipboard.</li>
 <li><b>Policy Presets</b> &mdash; Basic / Standard / High / Vault. <b>Rotation Checklist</b> &mdash; the steps that make a new password count.</li>
 <li><b>Audit Ledger</b> &mdash; SHA-256 hash chain of metadata only. <b>Verify</b> names the first broken block.</li>
-<li><b>Walkthrough</b> &mdash; <kbd>G</kbd> for the tour, <kbd>Alt</kbd>+<kbd>P</kbd> to auto-play. <b>Command palette</b> &mdash; <kbd>Ctrl</kbd>+<kbd>K</kbd>. <b>Settings</b> &mdash; <kbd>P</kbd>.</li>
+<li><b>Using your own text</b> &mdash; in the Key Generator, <i>How should your text be mixed in?</i> puts the text from the base field into the key (append, prepend, shuffled together, or hidden inside the random part); only the random parts count as trusted bits. The optional <i>fold my text into the entropy pool</i> checkbox also feeds a SHA-256 hash of it into the pool as an extra source: it adds <b>0 trusted bits</b> and cannot weaken the output. Purge reseeds the pool.</li>
+<li><b>Opening page</b> &mdash; <b>Settings</b> &rarr; <i>Opening page</i> chooses what is open every time the page loads: Fortify a password (default), Key generator, Entropy sources, Guided tour, or Home banner only. The choice is saved in this browser; <b>Default View</b> applies it without reloading.</li>
+<li><b>Walkthrough</b> &mdash; the <b>Guided tour</b> button (or <kbd>G</kbd>) opens the tour on demand, <kbd>Alt</kbd>+<kbd>P</kbd> to auto-play. <b>Command palette</b> &mdash; <kbd>Ctrl</kbd>+<kbd>K</kbd>. <b>Settings</b> &mdash; <kbd>P</kbd>.</li>
 </ul></section>
 
 <section><h2>5 &middot; Privacy &amp; safety</h2>
